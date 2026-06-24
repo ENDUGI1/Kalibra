@@ -53,6 +53,11 @@ pnpm agent:resolve      # reveal → Brier → recordOutcome (after outcomes are
 pnpm dev:web            # http://localhost:3000
 ```
 
+## Deployment
+
+The dashboard reads from a **live Supabase** project (Postgres, RLS-protected, seeded with the real
+Amoy run) and deploys to **Vercel** via git integration. See [`docs/DEPLOY.md`](docs/DEPLOY.md).
+
 ## Phase 0 scope
 
 A single dummy market flows **fetch → predict → edge → commit (mock or Amoy) → dashboard**. That
