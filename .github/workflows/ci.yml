@@ -45,8 +45,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+      - name: Versions
+        run: 'echo "node=$(node -v) pnpm=$(pnpm -v)"'
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm install --frozen-lockfile 2>&1 | tee install.log || {
+            echo "::error::install failed: $(tail -c 1500 install.log | tr '\n' ' ')"
+            exit 1
+          }
       - name: Typecheck (shared, agent, web)
         run: pnpm -r typecheck
       - name: Build web
