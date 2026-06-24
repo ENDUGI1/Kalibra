@@ -28,6 +28,9 @@ contracts/out/
 contracts/cache/
 contracts/broadcast/
 
+# Pipeline runtime output (regenerated each run)
+.data/
+
 # Logs
 *.log
 npm-debug.log*

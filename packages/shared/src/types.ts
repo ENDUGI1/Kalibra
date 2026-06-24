@@ -78,6 +78,18 @@ export interface Reputation {
   avgBrierBps: number;
 }
 
+/**
+ * Snapshot the agent writes to the shared state file after a run; the dashboard's
+ * mock data layer reads it. Mirrors what the `market_overview` view + on-chain
+ * reputation would provide when Supabase/Amoy are live.
+ */
+export interface PipelineSnapshot {
+  updatedAt: string;
+  chainMode: "mock" | "amoy";
+  reputation: Reputation;
+  overview: MarketOverview[];
+}
+
 /** Denormalized row backing the dashboard's market table (cf. `market_overview` view). */
 export interface MarketOverview {
   marketId: string;
