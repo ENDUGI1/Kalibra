@@ -1,5 +1,5 @@
-import { BPS_DENOMINATOR, EDGE_THRESHOLD_BPS } from "./constants.js";
-import type { EdgeResult } from "./types.js";
+import { BPS_DENOMINATOR, EDGE_THRESHOLD_BPS } from "./constants";
+import type { EdgeResult } from "./types";
 
 /** Convert a probability in [0, 1] to basis points [0, 10000] (rounded, clamped). */
 export function probToBps(prob: number): number {

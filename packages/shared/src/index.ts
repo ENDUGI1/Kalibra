@@ -1,4 +1,4 @@
-export * from "./constants.js";
-export * from "./types.js";
-export * from "./math.js";
-export type { Database } from "./database.types.js";
+export * from "./constants";
+export * from "./types";
+export * from "./math";
+export type { Database } from "./database.types";

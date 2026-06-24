@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+/* Map semantic CSS variables to Tailwind utilities (bg-bg, text-muted, ...).
+   `inline` keeps the var() reference so the palette swaps with color-scheme. */
+@theme inline {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
+
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-elevated: var(--elevated);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-pos: var(--pos);
+  --color-pos-soft: var(--pos-soft);
+  --color-neg: var(--neg);
+  --color-neg-soft: var(--neg-soft);
+  --color-warn: var(--warn);
+}
+
+/* Dark is the primary terminal theme; light is a faithful system-pref fallback. */
+:root {
+  color-scheme: dark;
+  --bg: #09090b;
+  --panel: #0c0c0f;
+  --elevated: #131318;
+  --line: #1c1c21;
+  --line-strong: #2a2a31;
+  --fg: #e8e8ec;
+  --muted: #8a8a94;
+  --faint: #55555e;
+  --pos: #46c26a;
+  --pos-soft: color-mix(in srgb, #46c26a 14%, transparent);
+  --neg: #f0625a;
+  --neg-soft: color-mix(in srgb, #f0625a 14%, transparent);
+  --warn: #d6a44c;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --bg: #f7f7f8;
+    --panel: #ffffff;
+    --elevated: #ffffff;
+    --line: #e7e7ea;
+    --line-strong: #d4d4d8;
+    --fg: #18181b;
+    --muted: #5e5e69;
+    --faint: #9a9aa3;
+    --pos: #15803d;
+    --pos-soft: color-mix(in srgb, #15803d 10%, transparent);
+    --neg: #c0362e;
+    --neg-soft: color-mix(in srgb, #c0362e 9%, transparent);
+    --warn: #a76a12;
+  }
+}
+
+* {
+  border-color: var(--line);
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Tabular figures everywhere numbers line up in columns. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
