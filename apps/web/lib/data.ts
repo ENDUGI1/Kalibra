@@ -99,19 +99,33 @@ export async function getDashboardData(): Promise<DashboardData> {
 /** Derived header metrics from a snapshot. */
 export function deriveMetrics(snapshot: PipelineSnapshot) {
   const { overview, reputation } = snapshot;
-  const committed = overview.filter((o) => o.commitStatus === "committed").length;
+  const committed = overview.filter(
+    (o) => o.commitStatus === "committed" || o.commitStatus === "revealed",
+  ).length;
   const pending = overview.filter(
     (o) => o.commitStatus === "committed" && o.brierBps == null,
   ).length;
   const actionable = overview.filter(
     (o) => o.edgeBps != null && Math.abs(o.edgeBps) >= 500,
   ).length;
+  const withEdge = overview.filter((o) => o.edgeBps != null);
+  const avgEdgeBps = withEdge.length
+    ? Math.round(withEdge.reduce((s, o) => s + Math.abs(o.edgeBps ?? 0), 0) / withEdge.length)
+    : 0;
   return {
     tracked: overview.length,
     committed,
     pending,
     actionable,
+    avgEdgeBps,
     resolvedCount: reputation.resolvedCount,
     avgBrierBps: reputation.avgBrierBps,
   };
+}
+
+/** Resolved (forecast, outcome) pairs for the reliability diagram. */
+export function reliabilityPoints(snapshot: PipelineSnapshot) {
+  return snapshot.overview
+    .filter((o) => o.outcome != null && o.probModelBps != null)
+    .map((o) => ({ probBps: o.probModelBps as number, outcome: o.outcome as boolean }));
 }

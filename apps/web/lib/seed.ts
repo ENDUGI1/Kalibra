@@ -9,7 +9,7 @@ import type { PipelineSnapshot } from "@kalibra/shared";
 export const SEED_SNAPSHOT: PipelineSnapshot = {
   updatedAt: new Date(0).toISOString(),
   chainMode: "mock",
-  reputation: { resolvedCount: 0, avgBrierBps: 0 },
+  reputation: { resolvedCount: 2, avgBrierBps: 989 },
   overview: [
     {
       marketId: "0xseed-ars-che",
@@ -32,10 +32,12 @@ export const SEED_SNAPSHOT: PipelineSnapshot = {
       probMarketBps: 5800,
       probModelBps: 3471,
       edgeBps: -2329,
-      commitStatus: "committed",
+      commitStatus: "revealed",
       commitTx: "0x68b98b8c9fa17e44b0634e1233a67c5fa7f96df7ec53dc89457a551d7c6b2f68",
       committedAt: "2026-06-24T07:17:47.687Z",
       modelVersion: "baseline-0.1",
+      outcome: false,
+      brierBps: 1205,
     },
     {
       marketId: "0xseed-bay-dor",
@@ -46,10 +48,12 @@ export const SEED_SNAPSHOT: PipelineSnapshot = {
       probMarketBps: 6400,
       probModelBps: 7223,
       edgeBps: 823,
-      commitStatus: "committed",
+      commitStatus: "revealed",
       commitTx: "0xdb18bf0382c36c004a81d1ea17b62930091e3245f8bec9d59b82b4807edad2aa",
       committedAt: "2026-06-24T07:17:47.709Z",
       modelVersion: "baseline-0.1",
+      outcome: true,
+      brierBps: 772,
     },
   ],
 };

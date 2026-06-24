@@ -36,7 +36,7 @@ export function MarketsTable({
 }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[760px] border-collapse text-sm">
+      <table className="w-full min-w-[900px] border-collapse text-sm">
         <thead>
           <tr className="border-b border-line text-left text-[11px] uppercase tracking-wider text-faint">
             <th scope="col" className="px-6 py-2.5 font-medium">
@@ -53,6 +53,12 @@ export function MarketsTable({
             </th>
             <th scope="col" className="px-4 py-2.5 text-right font-medium">
               Edge
+            </th>
+            <th scope="col" className="px-4 py-2.5 font-medium">
+              Result
+            </th>
+            <th scope="col" className="px-4 py-2.5 text-right font-medium">
+              Brier
             </th>
             <th scope="col" className="px-4 py-2.5 font-medium">
               Commit
@@ -89,6 +95,22 @@ export function MarketsTable({
                 className={`px-4 py-3 text-right font-mono tnum ${EDGE_COLOR[edgeSign(r.edgeBps)]}`}
               >
                 {formatEdge(r.edgeBps)}
+              </td>
+              <td className="px-4 py-3 text-[12px]">
+                {r.outcome == null ? (
+                  <span className="text-faint">—</span>
+                ) : r.outcome ? (
+                  <span className="text-pos">Home win</span>
+                ) : (
+                  <span className="text-muted">Away/Draw</span>
+                )}
+              </td>
+              <td className="px-4 py-3 text-right font-mono text-fg tnum">
+                {r.brierBps == null ? (
+                  <span className="text-faint">—</span>
+                ) : (
+                  bpsToPct(r.brierBps, 2)
+                )}
               </td>
               <td className="px-4 py-3">
                 <StatusBadge status={r.commitStatus} />

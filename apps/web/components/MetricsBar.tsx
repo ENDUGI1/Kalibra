@@ -5,6 +5,7 @@ interface Metrics {
   committed: number;
   pending: number;
   actionable: number;
+  avgEdgeBps: number;
   resolvedCount: number;
   avgBrierBps: number;
 }
@@ -28,14 +29,10 @@ export function MetricsBar({ metrics }: { metrics: Metrics }) {
     >
       <Stat
         label="Avg Brier"
-        value={hasResolutions ? bpsToPct(metrics.avgBrierBps, 1) : "—"}
+        value={hasResolutions ? bpsToPct(metrics.avgBrierBps, 2) : "—"}
         sub={hasResolutions ? "lower is better" : "no resolutions yet"}
       />
-      <Stat
-        label="Calibration"
-        value={hasResolutions ? "—" : "—"}
-        sub={hasResolutions ? "reliability" : "awaiting outcomes"}
-      />
+      <Stat label="Avg edge" value={bpsToPct(metrics.avgEdgeBps, 2)} sub="model vs market" />
       <Stat label="Resolved" value={String(metrics.resolvedCount)} sub="predictions scored" />
       <Stat label="Open commits" value={String(metrics.pending)} sub="awaiting reveal" />
       <Stat label="Tracked" value={String(metrics.tracked)} sub="active markets" />

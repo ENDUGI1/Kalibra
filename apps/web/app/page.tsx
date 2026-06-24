@@ -1,4 +1,4 @@
-import { deriveMetrics, getDashboardData } from "../lib/data";
+import { deriveMetrics, getDashboardData, reliabilityPoints } from "../lib/data";
 import { Header } from "../components/Header";
 import { MarketsTable } from "../components/MarketsTable";
 import { MetricsBar } from "../components/MetricsBar";
@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   const { snapshot, source } = await getDashboardData();
   const metrics = deriveMetrics(snapshot);
+  const points = reliabilityPoints(snapshot);
 
   return (
     <main className="min-h-dvh">
@@ -39,7 +40,7 @@ export default async function DashboardPage() {
           </section>
 
           <aside className="border-t border-line lg:col-span-1 lg:border-t-0">
-            <ReliabilityDiagram resolvedCount={metrics.resolvedCount} />
+            <ReliabilityDiagram points={points} />
           </aside>
         </div>
       </div>
