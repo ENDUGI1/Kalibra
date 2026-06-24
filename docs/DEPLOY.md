@@ -16,16 +16,22 @@ Supabase directly — see below.
 
 ## Vercel (one-time git import → auto-deploy)
 
-The repo is pre-configured (`vercel.json` builds the `apps/web` workspace; the dashboard defaults to
-the public Supabase project in production, so **no env vars are required**).
+There is **no `vercel.json`** — Vercel's native monorepo detection handles it once the Root
+Directory is set. The dashboard defaults to the public Supabase project in production, so **no env
+vars are required**.
 
 1. Go to <https://vercel.com/new> and **Import** `ENDUGI1/Kalibra`.
-2. Set **Root Directory** to `apps/web` (recommended — Vercel auto-detects Next.js and installs the
-   pnpm workspace from the repo root). Leave the rest as detected.
+2. **Set Root Directory to `apps/web`.** This is the critical step: Vercel then auto-detects Next.js,
+   installs the pnpm workspace from the repo root, and finds `.next` in the right place.
 3. Click **Deploy**. Done — you get a live URL, and every push to `main` redeploys automatically.
 
-No environment variables are needed for the dashboard. To point it at a *different* Supabase
-project, set `SUPABASE_URL` and `SUPABASE_ANON_KEY` in the Vercel project settings.
+> If you already created the project and the build failed with a doubled output path
+> (`apps/web/apps/web/.next`), just set Root Directory = `apps/web` in
+> **Settings → Build & Deployment → Root Directory**, then **Redeploy**. Do not set a custom Output
+> Directory — leave it on the Next.js default.
+
+No environment variables are needed. To point at a *different* Supabase project, set `SUPABASE_URL`
+and `SUPABASE_ANON_KEY` in the Vercel project settings.
 
 ## (Optional) Agent → Supabase live writes
 
