@@ -12,6 +12,7 @@
     "build": "pnpm -r --filter \"./packages/*\" --filter \"./apps/*\" build",
     "dev:web": "pnpm --filter @kalibra/web dev",
     "agent:run": "pnpm --filter @kalibra/agent run:once",
+    "agent:resolve": "pnpm --filter @kalibra/agent resolve:once",
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint"
   },

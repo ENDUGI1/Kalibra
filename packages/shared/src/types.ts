@@ -88,6 +88,10 @@ export interface PipelineSnapshot {
   chainMode: "mock" | "amoy";
   reputation: Reputation;
   overview: MarketOverview[];
+  /** Full predictions incl. secret salt — local ledger for the resolve step. */
+  predictions?: Prediction[];
+  /** Recorded outcomes. */
+  resolutions?: Resolution[];
 }
 
 /** Denormalized row backing the dashboard's market table (cf. `market_overview` view). */

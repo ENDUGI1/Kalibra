@@ -43,5 +43,32 @@
     "league": "Bundesliga",
     "kickoff": "2026-08-29T16:30:00Z",
     "probMarketHome": 0.64
+  },
+  {
+    "sourceRef": "epl-TOT-NEW-2026-09-12",
+    "eventSlug": "tottenham-vs-newcastle",
+    "home": "TOT",
+    "away": "NEW",
+    "league": "EPL",
+    "kickoff": "2026-09-12T14:00:00Z",
+    "probMarketHome": 0.5
+  },
+  {
+    "sourceRef": "laliga-ATM-SEV-2026-09-13",
+    "eventSlug": "atletico-vs-sevilla",
+    "home": "ATM",
+    "away": "SEV",
+    "league": "LaLiga",
+    "kickoff": "2026-09-13T19:00:00Z",
+    "probMarketHome": 0.55
+  },
+  {
+    "sourceRef": "seriea-NAP-ROM-2026-09-14",
+    "eventSlug": "napoli-vs-roma",
+    "home": "NAP",
+    "away": "ROM",
+    "league": "Serie A",
+    "kickoff": "2026-09-14T18:45:00Z",
+    "probMarketHome": 0.48
   }
 ]

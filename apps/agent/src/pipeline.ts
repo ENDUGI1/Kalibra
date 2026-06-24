@@ -1,6 +1,7 @@
 import { type Hex } from "viem";
 import { type Prediction, computeEdge, probToBps } from "@kalibra/shared";
-import { commitPrediction } from "./adapters/chain.js";
+import { OnChainStatus } from "./abi/predictionRegistry.js";
+import { commitPrediction, readStatus } from "./adapters/chain.js";
 import { predict } from "./adapters/model.js";
 import { fetchMarkets } from "./adapters/polymarket.js";
 import { type RunRecord, persistRun } from "./adapters/store.js";
@@ -59,6 +60,14 @@ export async function runOnce(cfg: Config = loadConfig()): Promise<RunSummary> {
       };
 
       if (edge.actionable) {
+        // Idempotency: on Amoy, skip markets already committed in a prior run
+        // (re-committing would revert with AlreadyCommitted).
+        if ((await readStatus(cfg, market.marketId as Hex)) !== OnChainStatus.None) {
+          log.info("commit", "already committed on-chain, skipping", {
+            marketId: market.marketId,
+          });
+          continue;
+        }
         const commit = await commitPrediction(cfg, market.marketId as Hex, predictionHash);
         prediction.status = "committed";
         prediction.commitTx = commit.txHash;

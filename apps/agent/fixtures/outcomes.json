@@ -1,0 +1,10 @@
+[
+  { "sourceRef": "epl-ARS-CHE-2026-08-15", "outcome": true },
+  { "sourceRef": "epl-MCI-LIV-2026-08-16", "outcome": false },
+  { "sourceRef": "laliga-RMA-FCB-2026-08-22", "outcome": false },
+  { "sourceRef": "seriea-INT-JUV-2026-08-23", "outcome": false },
+  { "sourceRef": "bundesliga-BAY-DOR-2026-08-29", "outcome": true },
+  { "sourceRef": "epl-TOT-NEW-2026-09-12", "outcome": true },
+  { "sourceRef": "laliga-ATM-SEV-2026-09-13", "outcome": false },
+  { "sourceRef": "seriea-NAP-ROM-2026-09-14", "outcome": true }
+]

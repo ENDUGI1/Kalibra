@@ -13,9 +13,14 @@ aborting the run.
 
 ```bash
 cp .env.example .env          # defaults work with no secrets
-pnpm --filter @kalibra/agent run:once
-# or from the repo root: pnpm agent:run
+pnpm --filter @kalibra/agent run:once       # commit pipeline  (repo root: pnpm agent:run)
+pnpm --filter @kalibra/agent resolve:once   # reveal + score   (repo root: pnpm agent:resolve)
 ```
+
+`resolve:once` reads the salt ledger written by `run:once`, looks up outcomes
+(`fixtures/outcomes.json`), then `reveal → Brier → recordOutcome` for each committed market and
+refreshes reputation. On Amoy the commit step is idempotent (markets already committed on-chain are
+skipped), so re-running is safe.
 
 For the real model forecast, start the model service first (`cd model && uvicorn app.main:app`).
 If it's unreachable the agent logs a warning and uses a local fallback forecast, so the slice still
