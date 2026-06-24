@@ -44,17 +44,10 @@ jobs:
         uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
-      - name: Versions
-        run: 'echo "node=$(node -v) pnpm=$(pnpm -v)"'
+          # pnpm 11.9 imports node:sqlite, which requires Node >= 22.
+          node-version: "24"
       - name: Install dependencies
-        shell: bash
-        run: |
-          set -o pipefail
-          pnpm install --frozen-lockfile 2>&1 | tee install.log || {
-            echo "::error::install failed: $(tail -c 1500 install.log | tr '\n' ' ')"
-            exit 1
-          }
+        run: pnpm install --frozen-lockfile
       - name: Typecheck (shared, agent, web)
         run: pnpm -r typecheck
       - name: Build web
