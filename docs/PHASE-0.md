@@ -3,6 +3,25 @@
 The Phase 0 vertical slice is complete: a single dummy market flows
 **fetch → predict → edge → commit → dashboard**.
 
+## Live on Polygon Amoy (testnet)
+
+The slice has run end-to-end on-chain, not just in mock mode.
+
+- **`PredictionRegistry`**: [`0x94DC253fa37d416573760f10BD6188fE0234CC34`](https://amoy.polygonscan.com/address/0x94DC253fa37d416573760f10BD6188fE0234CC34)
+- **Agent / owner**: `0xce801AB6A2C20f6D6A712049A0c4dA3f667D27A6`
+- **Real `commitPrediction` txs** (4 actionable markets, each receipt confirmed):
+
+| Market | Tx |
+| ------ | -- |
+| MCI v LIV | [`0x3a949c78…fe8898`](https://amoy.polygonscan.com/tx/0x3a949c7848c06332652ef0e7edff37b83f0b651543a4ba39abd5a64946fe8898) |
+| RMA v FCB | [`0x045e1484…5a2aa`](https://amoy.polygonscan.com/tx/0x045e1484f176ab40bef8fc4f5457ff8776d97726d5e54c7973ff87339fe5a2aa) |
+| INT v JUV | [`0x078d90e1…e4f17`](https://amoy.polygonscan.com/tx/0x078d90e16ffc35b3333cde95d8eb2e192119fa6a379973a850078635fb9e4f17) |
+| BAY v DOR | [`0xab17aaa8…d1e1c`](https://amoy.polygonscan.com/tx/0xab17aaa8da4b8d6904aa214781936b02fd538be43ef2dcde6291014c567d1e1c) |
+
+Verified on-chain: first commit receipt `status=1 (success)`; `getPrediction` for a committed market
+returns `status=Committed`, `probBps=0` (unrevealed, as expected); `getReputation()` = `(0, 0)`
+(no resolutions yet). The wallet is a disposable testnet key — never funded with real assets.
+
 ## What works (verified)
 
 | Step | Component | Evidence |
