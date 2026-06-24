@@ -1,0 +1,21 @@
+{
+  "name": "kalibra",
+  "version": "0.1.0",
+  "private": true,
+  "description": "On-chain forecasting agent — verified, calibrated prediction accountability for prediction markets.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@11.9.0",
+  "scripts": {
+    "build": "pnpm -r --filter \"./packages/*\" --filter \"./apps/*\" build",
+    "dev:web": "pnpm --filter @kalibra/web dev",
+    "agent:run": "pnpm --filter @kalibra/agent run:once",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}
