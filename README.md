@@ -1,5 +1,7 @@
 # Kalibra
 
+[![CI](https://github.com/ENDUGI1/Kalibra/actions/workflows/ci.yml/badge.svg)](https://github.com/ENDUGI1/Kalibra/actions/workflows/ci.yml)
+
 **An on-chain forecasting agent.** Kalibra does **not** place bets. It produces probabilistic
 forecasts for football prediction markets, measures the *edge* between its own model and the market
 price, and — when the edge is large enough — **commits a hashed prediction on-chain before kickoff**
