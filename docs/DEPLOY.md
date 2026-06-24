@@ -34,13 +34,25 @@ Supabase project in production, so **no env vars are required**.
 No environment variables are needed. To point at a *different* Supabase project, set `SUPABASE_URL`
 and `SUPABASE_ANON_KEY` in the Vercel project settings.
 
+## Security: public reads are view-only
+
+RLS is enabled and **anon can only read the `market_overview` view** (no `salt` column). Direct
+reads of the `markets` / `predictions` / `resolutions` tables are revoked for `anon`, so the secret
+`salt` is never exposed before reveal (the probability space is tiny, so a leaked salt would make the
+commitment guessable). Writes and salt reads require the **service-role** key.
+
 ## (Optional) Agent → Supabase live writes
 
 The dashboard currently reads a seeded snapshot of the real Amoy run. To have the agent persist
-*future* runs to Supabase instead of the local state file:
+*future* runs to Supabase, end to end (commit **and** resolution):
 
 1. Get the **service-role** key from the Supabase dashboard (Project → Settings → API). Keep it
    secret — `.env` only, never commit.
-2. In `apps/agent/.env`: `STORE_MODE=supabase`, `SUPABASE_URL=…`, `SUPABASE_SERVICE_KEY=…`.
-3. `pnpm agent:run` upserts markets + predictions. (Resolution upserts to Supabase are a follow-up;
-   today `resolveOnce` writes resolutions to the local state file.)
+2. In `apps/agent/.env`: `STORE_MODE=supabase`, `SUPABASE_URL=…`, `SUPABASE_SERVICE_KEY=<service-role>`.
+3. `pnpm agent:run` upserts markets + predictions; `pnpm agent:resolve` upserts resolutions and flips
+   prediction status to `revealed`. The salt ledger always stays in the local state file (never
+   round-tripped through the public API).
+
+> Heads-up: a real run upserts by `market_id`, so it will **overwrite the seeded demo rows** with your
+> run's data (e.g. mock tx hashes if `CHAIN_MODE=mock`). Use `CHAIN_MODE=amoy` for runs you want
+> backed by real on-chain txs.

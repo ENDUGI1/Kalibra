@@ -47,33 +47,17 @@ async function computeReputation(
   return { resolvedCount: resolutions.length, avgBrierBps: Math.round(sum / resolutions.length) };
 }
 
+export { computeReputation };
+
+// --- local state file (the secret-salt ledger always lives here) ---------------
+
 async function writeSnapshot(snapshot: PipelineSnapshot): Promise<void> {
   const path = resolveStateFile();
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, `${JSON.stringify(snapshot, null, 2)}\n`, "utf-8");
 }
 
-/** Persist a fresh commit run, including the secret-salt ledger for later reveal. */
-async function persistMock(cfg: Config, records: RunRecord[]): Promise<void> {
-  const reputation = await computeReputation(cfg, []);
-  const snapshot: PipelineSnapshot = {
-    updatedAt: new Date().toISOString(),
-    chainMode: cfg.chainMode,
-    reputation,
-    overview: records.map(toOverview),
-    predictions: records.map((r) => r.prediction),
-    resolutions: [],
-  };
-  await writeSnapshot(snapshot);
-  const committed = records.filter((r) => r.prediction.status === "committed").length;
-  log.info("store", "wrote snapshot to state file", {
-    path: resolveStateFile(),
-    markets: records.length,
-    committed,
-  });
-}
-
-/** Read the current snapshot (the salt ledger lives here). */
+/** Read the current snapshot (the salt ledger). */
 export async function loadSnapshot(): Promise<PipelineSnapshot | null> {
   try {
     return JSON.parse(await readFile(resolveStateFile(), "utf-8")) as PipelineSnapshot;
@@ -82,34 +66,60 @@ export async function loadSnapshot(): Promise<PipelineSnapshot | null> {
   }
 }
 
-/** Rewrite the snapshot after resolution updates (overview/reputation/resolutions). */
-export async function persistSnapshot(snapshot: PipelineSnapshot): Promise<void> {
-  await writeSnapshot({ ...snapshot, updatedAt: new Date().toISOString() });
-  log.info("store", "updated snapshot after resolution", {
-    resolved: snapshot.reputation.resolvedCount,
-  });
-}
+// --- Supabase REST (PostgREST) -------------------------------------------------
+// Writes require the service-role key (anon is read-only on the view per RLS).
+// The salt stays in the local ledger and the service-role-only predictions table;
+// it is never exposed publicly.
 
-export { computeReputation };
-
-/** Best-effort Supabase persistence via PostgREST upsert (commit run only). */
-async function persistSupabase(cfg: Config, records: RunRecord[]): Promise<void> {
+function requireSupabase(cfg: Config): { url: string; key: string } {
   if (!cfg.supabaseUrl || !cfg.supabaseServiceKey) {
     throw new Error("STORE_MODE=supabase requires SUPABASE_URL and SUPABASE_SERVICE_KEY");
   }
-  const headers = {
-    "content-type": "application/json",
-    apikey: cfg.supabaseServiceKey,
-    authorization: `Bearer ${cfg.supabaseServiceKey}`,
-    prefer: "resolution=merge-duplicates",
-  };
-  const upsert = async (table: string, rows: unknown[], onConflict: string) => {
-    const url = new URL(`/rest/v1/${table}`, cfg.supabaseUrl);
-    url.searchParams.set("on_conflict", onConflict);
-    const res = await fetch(url, { method: "POST", headers, body: JSON.stringify(rows) });
-    if (!res.ok) throw new Error(`supabase ${table} upsert ${res.status}: ${await res.text()}`);
-  };
-  await upsert(
+  return { url: cfg.supabaseUrl, key: cfg.supabaseServiceKey };
+}
+
+async function sbUpsert(
+  cfg: Config,
+  table: string,
+  rows: unknown[],
+  onConflict: string,
+): Promise<void> {
+  if (rows.length === 0) return;
+  const { url, key } = requireSupabase(cfg);
+  const endpoint = new URL(`/rest/v1/${table}`, url);
+  endpoint.searchParams.set("on_conflict", onConflict);
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      apikey: key,
+      authorization: `Bearer ${key}`,
+      prefer: "resolution=merge-duplicates",
+    },
+    body: JSON.stringify(rows),
+  });
+  if (!res.ok) throw new Error(`supabase ${table} upsert ${res.status}: ${await res.text()}`);
+}
+
+async function sbPatch(cfg: Config, table: string, match: string, body: unknown): Promise<void> {
+  const { url, key } = requireSupabase(cfg);
+  const endpoint = new URL(`/rest/v1/${table}`, url);
+  endpoint.searchParams.set(match.split("=")[0] ?? "", match.split("=")[1] ?? "");
+  const res = await fetch(endpoint, {
+    method: "PATCH",
+    headers: {
+      "content-type": "application/json",
+      apikey: key,
+      authorization: `Bearer ${key}`,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`supabase ${table} patch ${res.status}: ${await res.text()}`);
+}
+
+async function upsertRunToSupabase(cfg: Config, records: RunRecord[]): Promise<void> {
+  await sbUpsert(
+    cfg,
     "markets",
     records.map((r) => ({
       market_id: r.market.marketId,
@@ -124,7 +134,8 @@ async function persistSupabase(cfg: Config, records: RunRecord[]): Promise<void>
     })),
     "market_id",
   );
-  await upsert(
+  await sbUpsert(
+    cfg,
     "predictions",
     records.map((r) => ({
       market_id: r.market.marketId,
@@ -143,7 +154,57 @@ async function persistSupabase(cfg: Config, records: RunRecord[]): Promise<void>
   log.info("store", "upserted run to Supabase", { markets: records.length });
 }
 
+async function upsertResolutionsToSupabase(cfg: Config, snapshot: PipelineSnapshot): Promise<void> {
+  const resolutions = snapshot.resolutions ?? [];
+  await sbUpsert(
+    cfg,
+    "resolutions",
+    resolutions.map((r) => ({
+      market_id: r.marketId,
+      outcome: r.outcome,
+      brier_bps: r.brierBps,
+      record_tx: r.recordTx,
+      resolved_at: r.resolvedAt,
+    })),
+    "market_id",
+  );
+  // Flip resolved predictions to 'revealed' so market_overview reflects status.
+  for (const r of resolutions) {
+    await sbPatch(cfg, "predictions", `market_id=eq.${r.marketId}`, { status: "revealed" });
+  }
+  log.info("store", "upserted resolutions to Supabase", { resolved: resolutions.length });
+}
+
+// --- public API ---------------------------------------------------------------
+
+/**
+ * Persist a fresh commit run. The local state file is always written (it is the
+ * salt ledger the resolve step reads); in supabase mode the public columns are
+ * also mirrored to Postgres.
+ */
 export async function persistRun(cfg: Config, records: RunRecord[]): Promise<void> {
-  if (cfg.storeMode === "supabase") return persistSupabase(cfg, records);
-  return persistMock(cfg, records);
+  const snapshot: PipelineSnapshot = {
+    updatedAt: new Date().toISOString(),
+    chainMode: cfg.chainMode,
+    reputation: await computeReputation(cfg, []),
+    overview: records.map(toOverview),
+    predictions: records.map((r) => r.prediction),
+    resolutions: [],
+  };
+  await writeSnapshot(snapshot);
+  log.info("store", "wrote snapshot to state file", {
+    path: resolveStateFile(),
+    markets: records.length,
+    committed: records.filter((r) => r.prediction.status === "committed").length,
+  });
+  if (cfg.storeMode === "supabase") await upsertRunToSupabase(cfg, records);
+}
+
+/** Persist resolution updates: always to the local file, plus Supabase if enabled. */
+export async function persistResolutions(cfg: Config, snapshot: PipelineSnapshot): Promise<void> {
+  await writeSnapshot({ ...snapshot, updatedAt: new Date().toISOString() });
+  log.info("store", "updated snapshot after resolution", {
+    resolved: snapshot.reputation.resolvedCount,
+  });
+  if (cfg.storeMode === "supabase") await upsertResolutionsToSupabase(cfg, snapshot);
 }

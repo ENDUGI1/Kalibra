@@ -2,7 +2,7 @@ import { type Hex } from "viem";
 import { brierBps as computeBrierBps } from "@kalibra/shared";
 import { recordOutcome, revealPrediction } from "./adapters/chain.js";
 import { fetchOutcomes } from "./adapters/outcomes.js";
-import { computeReputation, loadSnapshot, persistSnapshot } from "./adapters/store.js";
+import { computeReputation, loadSnapshot, persistResolutions } from "./adapters/store.js";
 import { type Config, loadConfig } from "./config.js";
 import { log } from "./lib/logger.js";
 
@@ -86,7 +86,7 @@ export async function resolveOnce(cfg: Config = loadConfig()): Promise<ResolveSu
   snapshot.resolutions = resolutions;
   snapshot.reputation = await computeReputation(cfg, resolutions);
 
-  await persistSnapshot(snapshot);
+  await persistResolutions(cfg, snapshot);
   log.info("resolve", "resolveOnce complete", {
     revealed,
     recorded,
