@@ -10,6 +10,12 @@ export interface DashboardData {
   source: DataSource;
 }
 
+// Public Supabase project (publishable key — safe to expose; RLS allows read-only
+// anon access, writes are service-role only). Used as the production default so the
+// deployed dashboard reads the live DB without extra env config; override via env.
+const PUBLIC_SUPABASE_URL = "https://mvrbfiztubrbbepwgnnm.supabase.co";
+const PUBLIC_SUPABASE_KEY = "sb_publishable_ij95o_qtM4oKQ5jg7HodTg_74ppFN5v";
+
 function findRepoRoot(start: string = process.cwd()): string {
   let dir = resolve(start);
   for (;;) {
@@ -83,8 +89,14 @@ async function readSupabase(url: string, key: string): Promise<PipelineSnapshot 
  * seed. Never hardcodes data in components; this is the single data layer.
  */
 export async function getDashboardData(): Promise<DashboardData> {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_ANON_KEY ?? process.env.SUPABASE_SERVICE_KEY;
+  // In production (Vercel) default to the public project; locally prefer the
+  // agent's state file unless env vars are explicitly set.
+  const isProd = process.env.NODE_ENV === "production";
+  const url = process.env.SUPABASE_URL ?? (isProd ? PUBLIC_SUPABASE_URL : undefined);
+  const key =
+    process.env.SUPABASE_ANON_KEY ??
+    process.env.SUPABASE_SERVICE_KEY ??
+    (isProd ? PUBLIC_SUPABASE_KEY : undefined);
   if (url && key) {
     const snap = await readSupabase(url, key);
     if (snap) return { snapshot: snap, source: "supabase" };
