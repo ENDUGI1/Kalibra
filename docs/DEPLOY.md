@@ -16,19 +16,20 @@ Supabase directly — see below.
 
 ## Vercel (one-time git import → auto-deploy)
 
-There is **no `vercel.json`** — Vercel's native monorepo detection handles it once the Root
-Directory is set. The dashboard defaults to the public Supabase project in production, so **no env
-vars are required**.
+`apps/web/vercel.json` pins the build config (framework, install/build command, and
+`outputDirectory: .next` relative to the root directory). The dashboard defaults to the public
+Supabase project in production, so **no env vars are required**.
 
 1. Go to <https://vercel.com/new> and **Import** `ENDUGI1/Kalibra`.
-2. **Set Root Directory to `apps/web`.** This is the critical step: Vercel then auto-detects Next.js,
-   installs the pnpm workspace from the repo root, and finds `.next` in the right place.
+2. **Set Root Directory to `apps/web`.** Vercel reads `apps/web/vercel.json`, auto-detects Next.js,
+   and installs the pnpm workspace from the repo root.
 3. Click **Deploy**. Done — you get a live URL, and every push to `main` redeploys automatically.
 
-> If you already created the project and the build failed with a doubled output path
-> (`apps/web/apps/web/.next`), just set Root Directory = `apps/web` in
-> **Settings → Build & Deployment → Root Directory**, then **Redeploy**. Do not set a custom Output
-> Directory — leave it on the Next.js default.
+> **Build fails with a doubled path** (`/vercel/path0/apps/web/apps/web/.next`)? That means the
+> project's **Output Directory** setting is still overridden to `apps/web/.next` (left over from an
+> earlier import). `apps/web/vercel.json` now overrides it to the correct `.next`, so just
+> **Redeploy**. If it still fails, go to **Settings → Build and Deployment** and **clear the Output
+> Directory override** (leave it on the Next.js default).
 
 No environment variables are needed. To point at a *different* Supabase project, set `SUPABASE_URL`
 and `SUPABASE_ANON_KEY` in the Vercel project settings.
