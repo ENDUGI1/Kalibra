@@ -22,7 +22,7 @@ fetch market odds  →  model forecast  →  compute edge  →  commit hash on-c
 | ------------------- | ------------------------- | -------------------------------------------------------------------- |
 | `contracts/`        | Solidity + Foundry        | `PredictionRegistry` — commit/reveal + reputation (Polygon Amoy)     |
 | `model/`            | Python + FastAPI          | `POST /predict` — baseline Poisson forecast (`prob_home`)            |
-| `apps/agent/`       | TypeScript (Node)         | `runOnce()` pipeline: fetch → predict → edge → commit → store        |
+| `apps/agent/`       | TypeScript (Node)         | `runOnce()` commit pipeline + `resolveOnce()` reveal/score pipeline  |
 | `apps/web/`         | Next.js 14 + Tailwind v4  | Forecasting / calibration dashboard (dark, data-dense)               |
 | `packages/shared/`  | TypeScript                | Types shared across `agent` and `web`                                |
 | `supabase/`         | SQL migrations            | `markets`, `predictions`, `resolutions` schema                       |
@@ -46,7 +46,8 @@ cd model && uv sync && uv run uvicorn app.main:app --reload   # http://127.0.0.1
 
 # 3. Agent pipeline (one-shot)
 cp apps/agent/.env.example apps/agent/.env   # then fill values; CHAIN_MODE=mock works with no key
-pnpm agent:run
+pnpm agent:run          # fetch → predict → edge → commit
+pnpm agent:resolve      # reveal → Brier → recordOutcome (after outcomes are known)
 
 # 4. Dashboard
 pnpm dev:web            # http://localhost:3000

@@ -65,20 +65,43 @@ pipeline runOnce complete  evaluated=5 committed=4 skipped=1
 - **Single data layer** — the dashboard reads Supabase → state file → seed (in that order);
   no data is hardcoded in components.
 
+## Phase 1 progress — resolution loop (done)
+
+The commit→reveal→record loop now runs end-to-end, including on Amoy.
+
+- `agent:resolve` (`resolveOnce()`): for each committed prediction with a known outcome →
+  `revealPrediction` → compute Brier → `recordOutcome`, then refresh reputation (read on-chain in
+  `amoy` mode).
+- Salt ledger persisted between runs so reveals match their commits; `runOnce()` is idempotent on
+  Amoy (skips markets already committed on-chain).
+- Outcomes via `apps/agent/fixtures/outcomes.json` (real results feed plugs in behind the same
+  adapter).
+- Dashboard fills in: Avg Brier + Avg edge metrics, Result/Brier table columns, and a binned
+  reliability diagram.
+
+Verified on Amoy: `getReputation()` = `(2, 4211 bps)`; `getPrediction(TOT)` = `status=Resolved`,
+`probBps=3913`, `brierBps=3705`. Real reveal/record txs:
+
+| Market | Reveal | Record |
+| ------ | ------ | ------ |
+| TOT v NEW | [`0x62fced42…`](https://amoy.polygonscan.com/tx/0x62fced42ac51f8949e2c5abc05a721cd6ffba0ca2145b99def62108bbd64084e) | [`0xb375f65a…`](https://amoy.polygonscan.com/tx/0xb375f65acc1e06b21fbe16c43fc958567b2897850a67e06c24ceedaf3711c89b) |
+| ATM v SEV | [`0xa362cb1c…`](https://amoy.polygonscan.com/tx/0xa362cb1c850622190ac67cf0e8fb9bf20b429e68985662e5ead04ed1c80eb9c3) | [`0x362890d7…`](https://amoy.polygonscan.com/tx/0x362890d7fde01cffb7370f3e48a710027e63ad232097989af9d6ada2d2b97836) |
+
 ## Phase 1 checklist
 
-- [ ] Deploy `PredictionRegistry` to Amoy; run the agent with `CHAIN_MODE=amoy` and land a real commit.
+- [x] Deploy `PredictionRegistry` to Amoy; run the agent with `CHAIN_MODE=amoy` and land a real commit.
+- [x] Resolution loop: reveal → Brier → record; surface reputation on the dashboard.
+- [x] Reliability diagram plots binned observed-frequency points.
+- [ ] Stand up a Supabase project; apply the migration; switch `STORE_MODE=supabase`. Regenerate
+      `database.types.ts` from the live schema.
+- [x] CI: `forge test`, `pytest`, `tsc`, `next build` on every push (GitHub Actions).
+- [ ] Auto-trigger resolution: poll a real results feed after kickoff (replace `outcomes.json`).
 - [ ] Stand up a Supabase project; apply the migration; switch `STORE_MODE=supabase`. Regenerate
       `database.types.ts` from the live schema.
 - [ ] Harden the live Polymarket Gamma adapter (reliable home-win price extraction, 1X2 handling,
       pagination, rate limits).
-- [ ] Resolution loop: after kickoff, `revealPrediction` then `recordOutcome` with the computed
-      Brier score; surface reputation on the dashboard.
-- [ ] Real reliability diagram: bin revealed forecasts by predicted probability, plot observed
-      frequency vs. forecast, add count-weighted points.
 - [ ] Replace the Poisson baseline with a fitted model (team ratings / xG features) behind the same
       `/predict` contract.
-- [ ] Scheduling: move `runOnce()` to a Vercel Cron / scheduled job; add idempotency + alerting.
+- [ ] Scheduling: move `runOnce()` / `resolveOnce()` to a Vercel Cron / scheduled job; add alerting.
 - [ ] Access control & ops: dedicated agent key management, gas handling, retries, structured
       monitoring.
-- [ ] CI: `forge test`, `pytest`, `tsc`, `next build` on every push.
