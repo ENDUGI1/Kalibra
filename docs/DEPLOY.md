@@ -34,6 +34,26 @@ Supabase project in production, so **no env vars are required**.
 No environment variables are needed. To point at a *different* Supabase project, set `SUPABASE_URL`
 and `SUPABASE_ANON_KEY` in the Vercel project settings.
 
+## Scheduled agent (GitHub Actions)
+
+`.github/workflows/agent.yml` runs the pipeline automatically (cron every 12h + manual
+**Run workflow**): real ESPN markets → forecast → commit on Amoy → resolve finished matches →
+write to Supabase. The model service is started on the runner itself (no hosting needed). The
+workflow **skips (stays green)** until the secrets are set.
+
+Add these under **GitHub repo → Settings → Secrets and variables → Actions → New repository secret**:
+
+| Secret | Value |
+| ------ | ----- |
+| `PRIVATE_KEY` | The **contract owner** key (the address that deployed `PredictionRegistry`). Only the owner can commit/reveal/record — a different key reverts with `NotOwner`. On Amoy this is a testnet throwaway; for mainnet, use a fresh key and redeploy. |
+| `CONTRACT_ADDRESS` | `0x94DC253fa37d416573760f10BD6188fE0234CC34` |
+| `SUPABASE_URL` | `https://mvrbfiztubrbbepwgnnm.supabase.co` |
+| `SUPABASE_SERVICE_KEY` | service-role key (Supabase → Settings → API) |
+| `RPC_URL` | *(optional)* defaults to the public Amoy RPC |
+
+Cost: GitHub Actions is free for public repos; Amoy uses faucet test-POL. Scheduled workflows on
+public repos auto-pause after ~60 days of repo inactivity (re-enable in the Actions tab).
+
 ## Security: public reads are view-only
 
 RLS is enabled and **anon can only read the `market_overview` view** (no `salt` column). Direct

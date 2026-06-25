@@ -17,6 +17,7 @@ export interface Config {
   espnApi: string;
   espnLeague: string;
   espnMaxMarkets: number;
+  espnIncludeFinished: boolean;
   chainMode: ChainMode;
   rpcUrl: string;
   privateKey?: string;
@@ -50,6 +51,7 @@ export function loadConfig(): Config {
     espnApi: process.env.ESPN_API ?? "https://site.api.espn.com",
     espnLeague: process.env.ESPN_LEAGUE ?? "fifa.world",
     espnMaxMarkets: intEnv("ESPN_MAX_MARKETS", 8),
+    espnIncludeFinished: process.env.ESPN_INCLUDE_FINISHED === "true",
     chainMode: enumEnv("CHAIN_MODE", ["mock", "amoy"], "mock"),
     rpcUrl: process.env.RPC_URL ?? "https://rpc-amoy.polygon.technology",
     privateKey: process.env.PRIVATE_KEY || undefined,

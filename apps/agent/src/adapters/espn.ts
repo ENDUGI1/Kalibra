@@ -85,6 +85,10 @@ export async function fetchEspnMarkets(cfg: Config): Promise<Market[]> {
 
   const markets: Market[] = [];
   for (const e of events) {
+    // Anti-backdating: only forecast matches that have not finished, unless the
+    // caller explicitly opts in (ESPN_INCLUDE_FINISHED=true, for demos/tests).
+    if (!cfg.espnIncludeFinished && e.status?.type?.completed) continue;
+
     const competitors = e.competitions?.[0]?.competitors ?? [];
     const home = competitors.find((c) => c.homeAway === "home");
     const away = competitors.find((c) => c.homeAway === "away");

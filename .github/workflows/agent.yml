@@ -1,0 +1,90 @@
+name: Agent (scheduled)
+
+# Runs the Kalibra pipeline on a schedule: fetch real ESPN markets → forecast →
+# edge → commit on Amoy → resolve finished matches → persist to Supabase.
+# Stays green (skips) until the required secrets are configured.
+
+on:
+  schedule:
+    - cron: "0 */12 * * *" # every 12 hours (UTC)
+  workflow_dispatch:
+    inputs:
+      league:
+        description: "ESPN league code (e.g. fifa.world, eng.1, esp.1)"
+        required: false
+        default: "fifa.world"
+
+concurrency:
+  group: kalibra-agent
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      # Sources & modes (non-secret)
+      MARKETS_SOURCE: espn
+      OUTCOMES_SOURCE: espn
+      ESPN_LEAGUE: ${{ github.event.inputs.league || 'fifa.world' }}
+      MODEL_MODE: service
+      MODEL_URL: http://127.0.0.1:8000
+      CHAIN_MODE: amoy
+      STORE_MODE: supabase
+      EDGE_THRESHOLD_BPS: "500"
+      RPC_URL: ${{ secrets.RPC_URL || 'https://rpc-amoy.polygon.technology' }}
+      # Secrets
+      PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+      CONTRACT_ADDRESS: ${{ secrets.CONTRACT_ADDRESS }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+    steps:
+      - name: Check required secrets
+        id: gate
+        run: |
+          if [ -z "$PRIVATE_KEY" ] || [ -z "$CONTRACT_ADDRESS" ] || [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_KEY" ]; then
+            echo "Required secrets not set — skipping. Add PRIVATE_KEY, CONTRACT_ADDRESS, SUPABASE_URL, SUPABASE_SERVICE_KEY."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.ready == 'true'
+      - name: Install pnpm
+        if: steps.gate.outputs.ready == 'true'
+        uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        if: steps.gate.outputs.ready == 'true'
+        with:
+          node-version: "24"
+      - uses: actions/setup-python@v5
+        if: steps.gate.outputs.ready == 'true'
+        with:
+          python-version: "3.12"
+
+      - name: Install Node deps
+        if: steps.gate.outputs.ready == 'true'
+        run: pnpm install --frozen-lockfile
+      - name: Install model
+        if: steps.gate.outputs.ready == 'true'
+        working-directory: model
+        run: pip install -e .
+
+      - name: Start model service
+        if: steps.gate.outputs.ready == 'true'
+        working-directory: model
+        run: |
+          nohup python -m uvicorn app.main:app --port 8000 --host 127.0.0.1 >/tmp/model.log 2>&1 &
+          for i in $(seq 1 20); do
+            if curl -sf http://127.0.0.1:8000/health >/dev/null; then echo "model up"; exit 0; fi
+            sleep 1
+          done
+          echo "model failed to start"; cat /tmp/model.log; exit 1
+
+      - name: Commit run
+        if: steps.gate.outputs.ready == 'true'
+        run: pnpm agent:run
+
+      - name: Resolve run
+        if: steps.gate.outputs.ready == 'true'
+        run: pnpm agent:resolve
