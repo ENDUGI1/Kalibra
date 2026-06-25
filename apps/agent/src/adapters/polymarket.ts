@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { type Market, probToBps } from "@kalibra/shared";
 import type { Config } from "../config.js";
+import { fetchEspnMarkets } from "./espn.js";
 import { toMarketId } from "../lib/hash.js";
 import { log } from "../lib/logger.js";
 import { findRepoRoot } from "../lib/paths.js";
@@ -88,13 +89,24 @@ async function fetchLiveMarkets(cfg: Config): Promise<Market[]> {
 
 /** Return the football markets Kalibra should evaluate this run. */
 export async function fetchMarkets(cfg: Config): Promise<Market[]> {
-  if (cfg.polymarketMode === "live") {
+  // ESPN = real fixtures + bookmaker odds (reachable without geo limits).
+  if (cfg.marketsSource === "espn") {
+    try {
+      return await fetchEspnMarkets(cfg);
+    } catch (err) {
+      log.warn("fetch", "ESPN fetch failed, falling back to fixtures", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+  // Polymarket Gamma (only where the API is reachable).
+  if (cfg.marketsSource === "polymarket" || cfg.polymarketMode === "live") {
     try {
       const markets = await fetchLiveMarkets(cfg);
       log.info("fetch", `loaded ${markets.length} live Polymarket markets`, { mode: "live" });
       return markets;
     } catch (err) {
-      log.warn("fetch", "live fetch failed, falling back to fixtures", {
+      log.warn("fetch", "live Polymarket fetch failed, falling back to fixtures", {
         error: err instanceof Error ? err.message : String(err),
       });
     }

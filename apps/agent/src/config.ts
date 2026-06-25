@@ -3,6 +3,8 @@ import { EDGE_THRESHOLD_BPS } from "@kalibra/shared";
 export type ChainMode = "mock" | "amoy";
 export type ModelMode = "service" | "fallback";
 export type PolymarketMode = "fixture" | "live";
+export type MarketsSource = "fixture" | "polymarket" | "espn";
+export type OutcomesSource = "fixture" | "espn";
 export type StoreMode = "mock" | "supabase";
 
 export interface Config {
@@ -10,6 +12,11 @@ export interface Config {
   modelMode: ModelMode;
   polymarketMode: PolymarketMode;
   polymarketApi: string;
+  marketsSource: MarketsSource;
+  outcomesSource: OutcomesSource;
+  espnApi: string;
+  espnLeague: string;
+  espnMaxMarkets: number;
   chainMode: ChainMode;
   rpcUrl: string;
   privateKey?: string;
@@ -38,6 +45,11 @@ export function loadConfig(): Config {
     modelMode: enumEnv("MODEL_MODE", ["service", "fallback"], "service"),
     polymarketMode: enumEnv("POLYMARKET_MODE", ["fixture", "live"], "fixture"),
     polymarketApi: process.env.POLYMARKET_API ?? "https://gamma-api.polymarket.com",
+    marketsSource: enumEnv("MARKETS_SOURCE", ["fixture", "polymarket", "espn"], "fixture"),
+    outcomesSource: enumEnv("OUTCOMES_SOURCE", ["fixture", "espn"], "fixture"),
+    espnApi: process.env.ESPN_API ?? "https://site.api.espn.com",
+    espnLeague: process.env.ESPN_LEAGUE ?? "fifa.world",
+    espnMaxMarkets: intEnv("ESPN_MAX_MARKETS", 8),
     chainMode: enumEnv("CHAIN_MODE", ["mock", "amoy"], "mock"),
     rpcUrl: process.env.RPC_URL ?? "https://rpc-amoy.polygon.technology",
     privateKey: process.env.PRIVATE_KEY || undefined,
