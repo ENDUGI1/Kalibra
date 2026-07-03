@@ -83,8 +83,18 @@ jobs:
 
       - name: Commit run
         if: steps.gate.outputs.ready == 'true'
-        run: pnpm agent:run
+        run: |
+          set -o pipefail
+          pnpm agent:run 2>&1 | tee /tmp/agent-run.log || {
+            echo "::error::agent:run failed: $(tail -c 1200 /tmp/agent-run.log | tr '\n' ' ')"
+            exit 1
+          }
 
       - name: Resolve run
         if: steps.gate.outputs.ready == 'true'
-        run: pnpm agent:resolve
+        run: |
+          set -o pipefail
+          pnpm agent:resolve 2>&1 | tee /tmp/agent-resolve.log || {
+            echo "::error::agent:resolve failed: $(tail -c 1200 /tmp/agent-resolve.log | tr '\n' ' ')"
+            exit 1
+          }

@@ -54,8 +54,9 @@ function sourceRefFor(eventId: string): string {
   return `espn-${eventId}`;
 }
 
-async function getScoreboard(cfg: Config): Promise<EspnScoreboard> {
-  const url = `${cfg.espnApi}/apis/site/v2/sports/soccer/${cfg.espnLeague}/scoreboard`;
+async function getScoreboard(cfg: Config, date?: string): Promise<EspnScoreboard> {
+  const url = new URL(`${cfg.espnApi}/apis/site/v2/sports/soccer/${cfg.espnLeague}/scoreboard`);
+  if (date) url.searchParams.set("dates", date); // YYYYMMDD
   const res = await fetch(url, { headers: UA });
   if (!res.ok) throw new Error(`ESPN scoreboard ${res.status} ${res.statusText}`);
   return (await res.json()) as EspnScoreboard;
@@ -115,16 +116,42 @@ export async function fetchEspnMarkets(cfg: Config): Promise<Market[]> {
   return markets;
 }
 
-/** Real outcomes for finished matches, keyed by marketId (home win = true). */
-export async function fetchEspnOutcomes(cfg: Config): Promise<Map<string, boolean>> {
-  const board = await getScoreboard(cfg);
-  const map = new Map<string, boolean>();
-  for (const e of board.events ?? []) {
-    if (!e.status?.type?.completed) continue; // only settled matches
-    const home = e.competitions?.[0]?.competitors?.find((c) => c.homeAway === "home");
-    if (!home) continue;
-    map.set(toMarketId(sourceRefFor(e.id)), home.winner === true);
+/**
+ * Real outcomes for finished matches, keyed by marketId (home win = true).
+ * The default scoreboard only covers the current matchday, so callers should
+ * pass the YYYYMMDD dates of pending kickoffs to resolve older commitments.
+ */
+export async function fetchEspnOutcomes(
+  cfg: Config,
+  dates?: string[],
+): Promise<Map<string, boolean>> {
+  const boards: EspnScoreboard[] = [];
+  if (dates && dates.length > 0) {
+    for (const d of dates) {
+      try {
+        boards.push(await getScoreboard(cfg, d));
+      } catch (err) {
+        log.warn("resolve", `ESPN scoreboard failed for date ${d}`, {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+  } else {
+    boards.push(await getScoreboard(cfg));
   }
-  log.info("resolve", `loaded ${map.size} ESPN outcomes`, { league: cfg.espnLeague });
+
+  const map = new Map<string, boolean>();
+  for (const board of boards) {
+    for (const e of board.events ?? []) {
+      if (!e.status?.type?.completed) continue; // only settled matches
+      const home = e.competitions?.[0]?.competitors?.find((c) => c.homeAway === "home");
+      if (!home) continue;
+      map.set(toMarketId(sourceRefFor(e.id)), home.winner === true);
+    }
+  }
+  log.info("resolve", `loaded ${map.size} ESPN outcomes`, {
+    league: cfg.espnLeague,
+    dates: dates?.length ?? 0,
+  });
   return map;
 }

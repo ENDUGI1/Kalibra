@@ -1,8 +1,8 @@
 import { type Hex } from "viem";
-import { brierBps as computeBrierBps } from "@kalibra/shared";
+import { type Resolution, brierBps as computeBrierBps } from "@kalibra/shared";
 import { recordOutcome, revealPrediction } from "./adapters/chain.js";
 import { fetchOutcomes } from "./adapters/outcomes.js";
-import { computeReputation, loadSnapshot, persistResolutions } from "./adapters/store.js";
+import { applyResolutions, loadCommittedLedger } from "./adapters/store.js";
 import { type Config, loadConfig } from "./config.js";
 import { log } from "./lib/logger.js";
 
@@ -12,64 +12,82 @@ export interface ResolveSummary {
   pending: number;
 }
 
+/** YYYYMMDD (UTC) for an ISO timestamp. */
+function toDateKey(iso: string): string {
+  return iso.slice(0, 10).replaceAll("-", "");
+}
+
+/**
+ * Outcome lookups need the dates the pending matches were played on — the
+ * default ESPN scoreboard only covers the current matchday. Past kickoffs up to
+ * 30 days back are queried; future kickoffs have no result yet.
+ */
+function pendingKickoffDates(ledger: { kickoff?: string }[]): string[] {
+  const now = Date.now();
+  const windowMs = 30 * 24 * 60 * 60 * 1000;
+  const dates = new Set<string>();
+  for (const entry of ledger) {
+    if (!entry.kickoff) continue;
+    const t = new Date(entry.kickoff).getTime();
+    if (Number.isNaN(t) || t > now || now - t > windowMs) continue;
+    dates.add(toDateKey(entry.kickoff));
+  }
+  return [...dates];
+}
+
 /**
  * Resolve committed predictions whose outcomes are now known:
- * reveal → compute Brier → recordOutcome, then refresh reputation.
- * Manual trigger (Phase 1), mirrors runOnce. Per-market failures are isolated.
+ * reveal → compute Brier → recordOutcome, then persist + refresh reputation.
+ *
+ * The committed ledger comes from Supabase in supabase mode (CI runners are
+ * ephemeral, so the local state file cannot carry salts between scheduled runs)
+ * and from the local snapshot otherwise. Per-market failures are isolated.
  */
 export async function resolveOnce(cfg: Config = loadConfig()): Promise<ResolveSummary> {
-  log.info("resolve", "resolveOnce starting", { chainMode: cfg.chainMode });
+  log.info("resolve", "resolveOnce starting", {
+    chainMode: cfg.chainMode,
+    storeMode: cfg.storeMode,
+    outcomesSource: cfg.outcomesSource,
+  });
 
-  const snapshot = await loadSnapshot();
-  if (!snapshot?.predictions?.length) {
-    log.warn("resolve", "no prediction ledger found — run the pipeline (agent:run) first");
+  const ledger = await loadCommittedLedger(cfg);
+  if (ledger.length === 0) {
+    log.info("resolve", "no committed predictions awaiting resolution");
     return { revealed: 0, recorded: 0, pending: 0 };
   }
 
-  const outcomes = await fetchOutcomes(cfg);
-  const resolutions = snapshot.resolutions ?? [];
-  const already = new Set(resolutions.map((r) => r.marketId));
-
+  const outcomes = await fetchOutcomes(cfg, pendingKickoffDates(ledger));
+  const resolutions: Resolution[] = [];
   let revealed = 0;
   let recorded = 0;
   let pending = 0;
 
-  for (const pred of snapshot.predictions) {
-    if (pred.status !== "committed" || already.has(pred.marketId)) continue;
-
-    const outcome = outcomes.get(pred.marketId);
+  for (const entry of ledger) {
+    const outcome = outcomes.get(entry.marketId);
     if (outcome === undefined) {
       pending += 1;
-      continue; // match not settled yet
+      continue; // match not settled (or outside the outcome window) yet
     }
 
     try {
-      const marketId = pred.marketId as Hex;
-      const revealTx = await revealPrediction(cfg, marketId, pred.probBps, pred.salt as Hex);
+      const marketId = entry.marketId as Hex;
+      const revealTx = await revealPrediction(cfg, marketId, entry.probBps, entry.salt as Hex);
       revealed += 1;
 
-      const brierBps = computeBrierBps(pred.probBps, outcome);
+      const brierBps = computeBrierBps(entry.probBps, outcome);
       const recordTx = await recordOutcome(cfg, marketId, outcome, brierBps);
       recorded += 1;
 
-      pred.status = "revealed";
       resolutions.push({
-        marketId: pred.marketId,
+        marketId: entry.marketId,
         outcome,
         brierBps,
         recordTx: recordTx.txHash,
         resolvedAt: new Date().toISOString(),
       });
 
-      const row = snapshot.overview.find((o) => o.marketId === pred.marketId);
-      if (row) {
-        row.commitStatus = "revealed";
-        row.outcome = outcome;
-        row.brierBps = brierBps;
-      }
-
       log.info("resolve", "resolved market", {
-        marketId: pred.marketId,
+        marketId: entry.marketId,
         outcome,
         brierBps,
         revealTx: revealTx.txHash,
@@ -77,21 +95,18 @@ export async function resolveOnce(cfg: Config = loadConfig()): Promise<ResolveSu
       });
     } catch (err) {
       log.error("resolve", "market resolution failed, skipping", {
-        marketId: pred.marketId,
+        marketId: entry.marketId,
         error: err instanceof Error ? err.message : String(err),
       });
     }
   }
 
-  snapshot.resolutions = resolutions;
-  snapshot.reputation = await computeReputation(cfg, resolutions);
-
-  await persistResolutions(cfg, snapshot);
+  const reputation = await applyResolutions(cfg, resolutions);
   log.info("resolve", "resolveOnce complete", {
     revealed,
     recorded,
     pending,
-    reputation: snapshot.reputation,
+    reputation,
   });
   return { revealed, recorded, pending };
 }

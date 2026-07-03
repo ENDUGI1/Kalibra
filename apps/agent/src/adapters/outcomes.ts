@@ -23,11 +23,12 @@ async function fetchFixtureOutcomes(): Promise<Map<string, boolean>> {
 /**
  * Realized outcomes for resolved markets, keyed by on-chain marketId.
  * `espn` = real results (winner flag) from ESPN; `fixture` = local file.
+ * `dates` (YYYYMMDD) directs ESPN lookups at the days pending matches were played.
  */
-export async function fetchOutcomes(cfg: Config): Promise<Map<string, boolean>> {
+export async function fetchOutcomes(cfg: Config, dates?: string[]): Promise<Map<string, boolean>> {
   if (cfg.outcomesSource === "espn") {
     try {
-      return await fetchEspnOutcomes(cfg);
+      return await fetchEspnOutcomes(cfg, dates);
     } catch (err) {
       log.warn("resolve", "ESPN outcomes failed, falling back to fixtures", {
         error: err instanceof Error ? err.message : String(err),
