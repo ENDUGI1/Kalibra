@@ -1,4 +1,5 @@
 import { deriveMetrics, getDashboardData, reliabilityPoints } from "../lib/data";
+import { Glossary } from "../components/Glossary";
 import { Header } from "../components/Header";
 import { MarketsTable } from "../components/MarketsTable";
 import { MetricsBar } from "../components/MetricsBar";
@@ -44,6 +45,8 @@ export default async function DashboardPage() {
           </aside>
         </div>
       </div>
+
+      <Glossary />
 
       <footer className="border-t border-line">
         <p className="mx-auto max-w-[1400px] px-6 py-4 text-[11px] leading-relaxed text-faint">
