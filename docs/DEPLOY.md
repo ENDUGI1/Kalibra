@@ -36,10 +36,14 @@ and `SUPABASE_ANON_KEY` in the Vercel project settings.
 
 ## Scheduled agent (GitHub Actions)
 
-`.github/workflows/agent.yml` runs the pipeline automatically (cron every 12h + manual
-**Run workflow**): real ESPN markets → forecast → commit on Amoy → resolve finished matches →
-write to Supabase. The model service is started on the runner itself (no hosting needed). The
-workflow **skips (stays green)** until the secrets are set.
+`.github/workflows/agent.yml` runs the pipeline: real ESPN markets → forecast → commit on Amoy →
+resolve finished matches → write to Supabase. The model service is started on the runner itself (no
+hosting needed). The workflow **skips (stays green)** until the secrets are set.
+
+> **Cron is currently disabled** (manual trigger only, via Actions → "Agent (scheduled)" → Run
+> workflow) — this avoids unwanted scheduled runs/emails while the project is paused. To resume
+> automatic runs, add back a `schedule:` trigger (e.g. `cron: "0 */12 * * *"` for every 12 hours) in
+> the workflow's `on:` block.
 
 Add these under **GitHub repo → Settings → Secrets and variables → Actions → New repository secret**:
 

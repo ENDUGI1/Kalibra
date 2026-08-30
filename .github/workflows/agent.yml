@@ -1,12 +1,14 @@
 name: Agent (scheduled)
 
-# Runs the Kalibra pipeline on a schedule: fetch real ESPN markets → forecast →
-# edge → commit on Amoy → resolve finished matches → persist to Supabase.
+# Runs the Kalibra pipeline: fetch real ESPN markets → forecast → edge →
+# commit on Amoy → resolve finished matches → persist to Supabase.
 # Stays green (skips) until the required secrets are configured.
+#
+# The cron trigger is disabled — this project is no longer being actively run.
+# Trigger manually via Actions → "Agent (scheduled)" → Run workflow when needed,
+# or re-add a `schedule:` block below to resume automatic runs.
 
 on:
-  schedule:
-    - cron: "0 */12 * * *" # every 12 hours (UTC)
   workflow_dispatch:
     inputs:
       league:
